@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Ban Hành Cấu Kiện - Trimble Connect</title>
+    <script src="https://app.connect.trimble.com/tc/static/apiv2/WorkspaceAPI.js"></script>
+    
+    <style>
+        /* CSS GIAO DIỆN (Chỉnh sửa màu sắc, font chữ ở đây) */
+        :root {
+            --bg-color: #1e1e2f;          /* Màu nền tổng thể */
+            --card-bg: #27293d;           /* Màu nền của khung/bảng */
+            --text-main: #ffffff;         /* Màu chữ chính */
+            --text-muted: #9a9a9a;        /* Màu chữ phụ */
+            --border-color: #3b3d56;      /* Màu viền bảng */
+            --btn-bg: #e14eca;            /* Màu nút bấm (hồng tím) */
+            --btn-hover: #ba38a5;
+            --badge-issued: #00f2c3;      /* Màu xanh lá cho thẻ Đã ban hành */
+            --badge-pending: #ff8d72;     /* Màu cam/đỏ cho thẻ Chưa ban hành */
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        h3 { margin: 0; font-weight: 500; font-size: 18px; }
+        p { color: var(--text-muted); font-size: 13px; margin-top: 5px; }
+
+        /* Style cho Input và Button */
+        input[type="file"], input[type="text"] {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 4px;
+            outline: none;
+            width: 100%;
+            max-width: 300px;
+        }
+        
+        input[type="text"]:focus {
+            border-color: var(--btn-bg);
+        }
+
+        button {
+            background-image: linear-gradient(to bottom left, #e14eca, #ba54f5, #e14eca);
+            background-size: 210% 210%;
+            background-position: top right;
+            background-color: var(--btn-bg);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.15s ease;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(50,50,93,.11), 0 1px 3px rgba(0,0,0,.08);
+        }
+
+        /* Style cho Bảng (Table) */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        tr:hover { background-color: rgba(255, 255, 255, 0.05); }
+
+        /* Style cho Thẻ trạng thái (Badges) */
+        .badge {
+            padding: 5px 12px;
+            border-radius: 20px; /* Bo tròn tạo hình viên thuốc */
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #1d1d27; /* Chữ màu tối cho dễ đọc trên nền sáng */
+            display: inline-block;
+        }
+
+        .badge.issued { background-color: var(--badge-issued); }
+        .badge.pending { background-color: var(--badge-pending); color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h3>1. Quản lý Ban Hành Cấu Kiện</h3>
+        <p>Tải lên file CSV danh sách cấu kiện (Part List) để kiểm tra.</p>
+        <div style="margin-top: 15px;">
+            <input type="file" id="fileUpload" accept=".csv" />
+            <br>
+            <button id="btnIssue">Tô màu & Lập báo cáo</button>
+        </div>
+    </div>
+
+    <div class="card" id="reportPanel" style="display: none;">
+        <div class="card-header">
+            <h3>2. Tình trạng Báo Cáo</h3>
+            <input type="text" id="searchInput" placeholder="Tìm kiếm Assembly Mark..." onkeyup="searchTable()">
+        </div>
+        
+        <div style="overflow-x: auto;">
+            <table id="reportTable">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>DRAWING NO. (Assembly)</th>
+                        <th>Tình trạng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let issuedAssemblies = []; 
+        let workspaceAPI;
+
+        // Khởi tạo Trimble API
+        window.onload = async function() {
+            try {
+                workspaceAPI = await WorkspaceAPI.init();
+            } catch (error) {
+                console.log("Đang chạy ở chế độ Local (ngoài Trimble Connect) hoặc lỗi API.");
+            }
+        };
+
+        // Lắng nghe sự kiện click nút Ban hành
+        document.getElementById('btnIssue').addEventListener('click', function() {
+            const fileInput = document.getElementById('fileUpload');
+            if (fileInput.files.length === 0) {
+                alert("Sếp vui lòng chọn file CSV trước nhé!");
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                parseCSV(e.target.result);
+                processModelObjects(); 
+            };
+            reader.readAsText(file);
+        });
+
+        // Hàm đọc CSV
+        function parseCSV(csvText) {
+            issuedAssemblies = [];
+            const rows = csvText.split('\n');
+            let isDataRow = false;
+            
+            rows.forEach(row => {
+                const cols = row.split(',');
+                if (cols.includes('DRAWING NO.')) {
+                    isDataRow = true; return; 
+                }
+                if (isDataRow && cols.length > 1) {
+                    const drawingNo = cols[1] ? cols[1].trim() : "";
+                    if (drawingNo !== "" && drawingNo !== "DRAWING NO.") {
+                        issuedAssemblies.push(drawingNo);
+                    }
+                }
+            });
+        }
+
+        // Xử lý Trimble Model & Lập data
+        async function processModelObjects() {
+            let reportData = [];
+
+            if (!workspaceAPI) {
+                // MÔ PHỎNG DỮ LIỆU ĐỂ SẾP TEST GIAO DIỆN KHI CHƯA ĐƯA VÀO TRIMBLE
+                reportData = [
+                    { mark: "S2-AS-TP1", issued: issuedAssemblies.includes("S2-AS-TP1") },
+                    { mark: "S2-AS-TP2", issued: issuedAssemblies.includes("S2-AS-TP2") },
+                    { mark: "S2-AS-TP3", issued: false },
+                ];
+                renderReport(reportData);
+                return;
+            }
+
+            try {
+                const objects = await workspaceAPI.viewer.getObjects();
+                let objectsToColor = [];
+
+                for (const obj of objects) {
+                    const properties = await workspaceAPI.viewer.getObjectProperties(obj.id);
+                    // LƯU Ý: Đổi 'Name' hoặc 'Assembly mark' thành đúng trường thuộc tính của Sếp
+                    let assemblyMark = properties.find(p => p.name === 'Name' || p.name === 'Assembly mark')?.value;
+
+                    if (assemblyMark) {
+                        let isIssued = issuedAssemblies.includes(assemblyMark);
+                        reportData.push({ mark: assemblyMark, issued: isIssued });
+
+                        if (isIssued) { objectsToColor.push(obj.id); }
+                    }
+                }
+
+                // Tô màu xanh
+                if (objectsToColor.length > 0) {
+                    await workspaceAPI.viewer.setColors([
+                        { color: { r: 0, g: 255, b: 0, a: 1 }, objectIds: objectsToColor }
+                    ]);
+                }
+                renderReport(reportData);
+            } catch (error) {
+                console.error("Lỗi:", error);
+            }
+        }
+
+        // Render Bảng
+        function renderReport(data) {
+            document.getElementById('reportPanel').style.display = 'block';
+            const tbody = document.querySelector('#reportTable tbody');
+            tbody.innerHTML = ''; 
+
+            const uniqueAssemblies = [...new Map(data.map(item => [item.mark, item])).values()];
+
+            uniqueAssemblies.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                
+                // Cột STT
+                const tdIndex = document.createElement('td');
+                tdIndex.textContent = index + 1;
+
+                // Cột Tên cấu kiện
+                const tdMark = document.createElement('td');
+                tdMark.textContent = item.mark;
+                
+                // Cột Trạng thái (Tạo thẻ Badge)
+                const tdStatus = document.createElement('td');
+                const spanBadge = document.createElement('span');
+                
+                if (item.issued) {
+                    spanBadge.textContent = "Đã Ban Hành";
+                    spanBadge.className = "badge issued"; // Áp dụng CSS xanh
+                } else {
+                    spanBadge.textContent = "Chưa Ban Hành";
+                    spanBadge.className = "badge pending"; // Áp dụng CSS đỏ/cam
+                }
+
+                tdStatus.appendChild(spanBadge);
+                tr.appendChild(tdIndex);
+                tr.appendChild(tdMark);
+                tr.appendChild(tdStatus);
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Hàm Tìm kiếm trong bảng
+        function searchTable() {
+            let input = document.getElementById("searchInput").value.toUpperCase();
+            let tr = document.querySelector('#reportTable tbody').getElementsByTagName("tr");
+
+            for (let i = 0; i < tr.length; i++) {
+                let td = tr[i].getElementsByTagName("td")[1]; // Tìm ở cột DRAWING NO (cột số 2)
+                if (td) {
+                    let txtValue = td.textContent || td.innerText;
+                    if (txtValue.toUpperCase().indexOf(input) > -1) {
+                        tr[i].style.display = "";
+                    } else {
+                        tr[i].style.display = "none";
+                    }
+                }       
+            }
+        }
+    </script>
+</body>
+</html>
