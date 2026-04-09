@@ -1,7 +1,7 @@
 {
-  "title": "3D Model Interact",
-  "url": "http://localhost:8080/index.html",
-  "icon": "http://localhost:8080/icon.png",
-  "description": "An extension to interact with the 3D Model in Trimble Connect (developed with Gemini).",
-  "enabled": true
+  "title": "DDC Statistics",
+  "description": "Search, filter and highlight 3D objects by name/assembly. Export volume & steel weight statistics to Excel.",
+  "version": "1.0.0",
+  "icon": "https://ktshungbm.github.io/trimble-tool/icon.png",
+  "url": "https://ktshungbm.github.io/trimble-tool/index.html"
 }
