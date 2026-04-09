@@ -1,0 +1,17 @@
+{
+  "name": "trimble-tool",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "@trimble-oss/trimble-connect-workspace-api": "^1.0.0"
+  }
+}
