@@ -1,0 +1,7 @@
+{
+  "title": "3D Model Interact",
+  "url": "http://localhost:8080/index.html",
+  "icon": "http://localhost:8080/icon.png",
+  "description": "An extension to interact with the 3D Model in Trimble Connect (developed with Gemini).",
+  "enabled": true
+}
