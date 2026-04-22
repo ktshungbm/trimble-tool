@@ -1,0 +1,7 @@
+{
+  "title": "Excel Colorizer",
+  "icon": "https://heodaigia1983.github.io/trimble-extension/icon.png?v=3",
+  "url": "https://heodaigia1983.github.io/trimble-extension/index.html?v=3",
+  "description": "Read Excel and colorize objects by GUID",
+  "enabled": true
+}
