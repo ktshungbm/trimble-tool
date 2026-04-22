@@ -1,52 +1,256 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="vi">
 <head>
-  <meta charset="utf-8" />
-  <title>Excel Colorizer</title>
-
-  <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
-  <script src="https://components.connect.trimble.com/trimble-connect-workspace-api/index.js"></script>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 12px;
-      margin: 0;
-    }
-
-    h3 {
-      margin-top: 0;
-      margin-bottom: 12px;
-    }
-
-    input, button {
-      margin: 6px 0;
-    }
-
-    #log {
-      white-space: pre-wrap;
-      background: #f3f3f3;
-      padding: 8px;
-      height: 260px;
-      overflow: auto;
-      margin-top: 8px;
-      border: 1px solid #ddd;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIM STEEL - Paint Approval Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Tùy chỉnh thanh cuộn cho hợp Dark Mode */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        
+        /* Hiệu ứng viền neon nhẹ */
+        .glow-amber { box-shadow: 0 0 10px rgba(245, 158, 11, 0.2); }
+        .glow-green { box-shadow: 0 0 10px rgba(16, 185, 129, 0.2); }
+    </style>
 </head>
-<body>
-  <h3>Excel Paint Code Colorizer</h3>
+<body class="bg-[#12141a] text-slate-300 font-sans min-h-screen flex justify-center p-4">
 
-  <select id="fileType">
-    <option value="Ban Hành">File Ban Hành</option>
-    <option value="RFI">File RFI</option>
-  </select>
-  <input type="file" id="fileInput" accept=".xls,.xlsx" />
-  <br />
-  <button id="readBtn">Đọc Excel</button>
+    <div class="w-full max-w-[400px] bg-[#1a1d24] rounded-xl shadow-2xl overflow-hidden border border-slate-800/50 flex flex-col h-[850px]">
+        
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-[#1e222b]">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-emerald-500 flex items-center justify-center shadow-lg">
+                    <i class="fa-solid fa-palette text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-white text-md tracking-wide">BIM STEEL TOOL</h1>
+                    <p class="text-[10px] text-slate-500 uppercase tracking-wider">Paint & Approval Control</p>
+                </div>
+            </div>
+            <button id="btn-admin" onclick="toggleAdmin()" class="bg-slate-800 hover:bg-slate-700 text-slate-400 p-2 rounded-lg transition-colors border border-slate-700">
+                <i class="fa-solid fa-lock text-sm" id="admin-icon"></i>
+            </button>
+        </div>
 
-  <div id="log"></div>
+        <div class="p-4 space-y-5 overflow-y-auto flex-1">
+            
+            <div class="space-y-4">
+                <div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fa-solid fa-folder-open text-amber-400 text-sm"></i>
+                        <span class="text-xs font-bold text-slate-400 uppercase">File Trình duyệt &rarr; <span class="text-amber-500">Màu Cam</span></span>
+                    </div>
+                    
+                    <div id="lock-zone-1" class="h-16 rounded-xl border border-dashed border-slate-700 bg-[#16181e] flex flex-col items-center justify-center opacity-70">
+                        <i class="fa-solid fa-lock text-slate-600 mb-1"></i>
+                        <span class="text-[10px] text-slate-500">Mở khóa Admin để Upload</span>
+                    </div>
 
-  <script src="app.js?v=4"></script>
+                    <label id="upload-zone-1" class="hidden relative h-16 rounded-xl border border-dashed border-amber-900/50 bg-[#16181e] flex items-center px-4 cursor-pointer hover:bg-[#1a1e25] transition-colors glow-amber group">
+                        <input type="file" id="file-amber" accept=".csv, .xlsx" class="hidden" onchange="handleFileSelect('file-amber', 'name-amber')">
+                        <div class="w-4 h-4 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)] mr-3 group-hover:scale-110 transition-transform"></div>
+                        <div class="flex flex-col">
+                            <span class="text-xs font-bold text-slate-300">Chọn file Excel/CSV <span class="text-amber-500 font-normal">(đang trình duyệt)</span></span>
+                            <span id="name-amber" class="text-[10px] font-mono text-amber-500 mt-0.5">Chưa chọn file</span>
+                        </div>
+                    </label>
+                </div>
+
+                <div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fa-solid fa-folder-open text-amber-400 text-sm"></i>
+                        <span class="text-xs font-bold text-slate-400 uppercase">File Đã ban hành &rarr; <span class="text-emerald-500">Xanh Lá</span></span>
+                    </div>
+
+                    <div id="lock-zone-2" class="h-16 rounded-xl border border-dashed border-slate-700 bg-[#16181e] flex flex-col items-center justify-center opacity-70">
+                        <i class="fa-solid fa-lock text-slate-600 mb-1"></i>
+                        <span class="text-[10px] text-slate-500">Mở khóa Admin để Upload</span>
+                    </div>
+
+                    <label id="upload-zone-2" class="hidden relative h-16 rounded-xl border border-dashed border-emerald-900/50 bg-[#16181e] flex items-center px-4 cursor-pointer hover:bg-[#1a1e25] transition-colors glow-green group">
+                        <input type="file" id="file-green" accept=".csv, .xlsx" class="hidden" onchange="handleFileSelect('file-green', 'name-green')">
+                        <div class="w-4 h-4 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] mr-3 group-hover:scale-110 transition-transform"></div>
+                        <div class="flex flex-col">
+                            <span class="text-xs font-bold text-slate-300">Chọn file Excel/CSV <span class="text-emerald-500 font-normal">(đã ban hành)</span></span>
+                            <span id="name-green" class="text-[10px] font-mono text-emerald-500 mt-0.5">Chưa chọn file</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <div class="flex-1 bg-[#1e222b] border border-slate-800 rounded-lg py-2 flex items-center justify-center gap-2">
+                    <div class="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.8)]"></div>
+                    <span class="text-[11px] font-medium text-slate-300">Trình duyệt</span>
+                </div>
+                <div class="flex-1 bg-[#1e222b] border border-slate-800 rounded-lg py-2 flex items-center justify-center gap-2">
+                    <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></div>
+                    <span class="text-[11px] font-medium text-slate-300">Đã ban hành</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+                <div class="bg-[#1e222b] border border-slate-800 rounded-lg p-2.5 flex flex-col">
+                    <span class="text-[10px] text-slate-500 mb-1">Tổng cấu kiện</span>
+                    <span id="stat-total" class="font-bold text-slate-300">—</span>
+                </div>
+                <div class="bg-[#1e222b] border border-slate-800 rounded-lg p-2.5 flex flex-col">
+                    <div class="flex items-center gap-1 mb-1"><div class="w-1.5 h-1.5 bg-amber-500 rounded-sm"></div><span class="text-[10px] text-slate-500">Trình duyệt</span></div>
+                    <span id="stat-amber" class="font-bold text-amber-500">—</span>
+                </div>
+                <div class="bg-[#1e222b] border border-slate-800 rounded-lg p-2.5 flex flex-col">
+                    <div class="flex items-center gap-1 mb-1"><div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div><span class="text-[10px] text-slate-500">Đã ban hành</span></div>
+                    <span id="stat-green" class="font-bold text-emerald-500">—</span>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="handleUpdate()" class="flex-[2] bg-emerald-700 hover:bg-emerald-600 text-emerald-50 font-bold py-2.5 rounded-lg text-sm transition-colors border border-emerald-600 shadow-[0_0_15px_rgba(4,120,87,0.3)] flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-play"></i> Update
+                </button>
+                <button onclick="handleReset()" class="flex-1 bg-[#252a35] hover:bg-[#2d3340] text-slate-300 font-bold py-2.5 rounded-lg text-sm transition-colors border border-slate-700 flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> Reset
+                </button>
+            </div>
+
+            <div>
+                <label class="block text-[10px] text-slate-500 mb-1.5 uppercase">Tên view sẽ lưu tự động (tuỳ chọn)</label>
+                <input type="text" id="view-name" placeholder="Ví dụ: Approval 2026-04-18" class="w-full bg-[#16181e] border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-2.5 focus:outline-none focus:border-amber-500 transition-colors placeholder:text-slate-600">
+            </div>
+
+            <div class="flex-1 flex flex-col min-h-[150px]">
+                <label class="block text-[10px] text-slate-500 mb-1.5 uppercase">LOG HỆ THỐNG</label>
+                <div id="system-log" class="flex-1 w-full bg-[#16181e] border border-slate-800 rounded-lg p-3 text-[11px] font-mono text-slate-400 overflow-y-auto space-y-1">
+                    <div class="text-slate-600">[Hệ thống] Sẵn sàng hoạt động.</div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <span class="text-[9px] text-slate-600 bg-slate-800/50 px-2 py-0.5 rounded">Paint Approval Tool v9.0 • Powered by BIM STEEL</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isAdmin = false;
+
+        // 1. Logic Mở khóa Admin
+        function toggleAdmin() {
+            const icon = document.getElementById('admin-icon');
+            const btn = document.getElementById('btn-admin');
+            
+            if(!isAdmin) {
+                let pass = prompt("Hệ thống bảo mật\nVui lòng nhập mật khẩu (Test: 123456):");
+                if(pass === "123456") {
+                    isAdmin = true;
+                    // Đổi giao diện nút
+                    icon.classList.replace('fa-lock', 'fa-unlock');
+                    btn.classList.replace('bg-slate-800', 'bg-emerald-900/50');
+                    btn.classList.replace('text-slate-400', 'text-emerald-400');
+                    btn.classList.replace('border-slate-700', 'border-emerald-700');
+                    
+                    // Hiện ô upload, ẩn ổ khóa
+                    document.getElementById('lock-zone-1').classList.add('hidden');
+                    document.getElementById('lock-zone-2').classList.add('hidden');
+                    document.getElementById('upload-zone-1').classList.remove('hidden');
+                    document.getElementById('upload-zone-2').classList.remove('hidden');
+                    
+                    addLog("Đã cấp quyền Admin. Có thể tải file lên.", "emerald");
+                } else if(pass !== null) {
+                    alert("Sai mật khẩu!");
+                }
+            } else {
+                isAdmin = false;
+                icon.classList.replace('fa-unlock', 'fa-lock');
+                btn.classList.replace('bg-emerald-900/50', 'bg-slate-800');
+                btn.classList.replace('text-emerald-400', 'text-slate-400');
+                btn.classList.replace('border-emerald-700', 'border-slate-700');
+                
+                document.getElementById('lock-zone-1').classList.remove('hidden');
+                document.getElementById('lock-zone-2').classList.remove('hidden');
+                document.getElementById('upload-zone-1').classList.add('hidden');
+                document.getElementById('upload-zone-2').classList.add('hidden');
+                
+                addLog("Đã khóa quyền Upload.", "slate");
+            }
+        }
+
+        // 2. Logic hiện tên file
+        function handleFileSelect(inputId, displayId) {
+            const input = document.getElementById(inputId);
+            const display = document.getElementById(displayId);
+            if(input.files && input.files[0]) {
+                display.innerText = input.files[0].name;
+                addLog(`Đã tải file dữ liệu: ${input.files[0].name}`);
+            }
+        }
+
+        // 3. Logic Nút Update
+        function handleUpdate() {
+            const fileAmber = document.getElementById('file-amber').files.length;
+            const fileGreen = document.getElementById('file-green').files.length;
+            const viewName = document.getElementById('view-name').value.trim();
+
+            if (fileAmber === 0 && fileGreen === 0) {
+                addLog("Lỗi: Chưa có dữ liệu đầu vào. Vui lòng chọn ít nhất 1 file.", "red");
+                return;
+            }
+
+            addLog("Đang chạy thuật toán phủ xám và tô màu mô hình 3D...", "amber");
+            
+            // GIẢ LẬP ĐỘ TRỄ CHẠY TRIMBLE API
+            setTimeout(() => {
+                document.getElementById('stat-total').innerText = "1,250";
+                document.getElementById('stat-amber').innerText = fileAmber ? "340" : "0";
+                document.getElementById('stat-green').innerText = fileGreen ? "850" : "0";
+                
+                addLog("Hoàn tất tô màu mô hình 3D thành công!", "emerald");
+
+                // AUTO-SAVE VIEW THUẬT TOÁN
+                if(viewName !== "") {
+                    addLog(`ĐÃ TỰ ĐỘNG LƯU VIEW: [${viewName}]`, "emerald");
+                } else {
+                    const autoName = "Auto_View_" + new Date().toISOString().slice(11,19).replace(/:/g, "");
+                    document.getElementById('view-name').value = autoName;
+                    addLog(`ĐÃ TỰ ĐỘNG LƯU VIEW MẶC ĐỊNH: [${autoName}]`, "emerald");
+                }
+
+            }, 1500);
+        }
+
+        // 4. Logic Nút Reset
+        function handleReset() {
+            document.getElementById('file-amber').value = "";
+            document.getElementById('file-green').value = "";
+            document.getElementById('name-amber').innerText = "Chưa chọn file";
+            document.getElementById('name-green').innerText = "Chưa chọn file";
+            
+            document.getElementById('stat-total').innerText = "—";
+            document.getElementById('stat-amber').innerText = "—";
+            document.getElementById('stat-green').innerText = "—";
+            
+            document.getElementById('view-name').value = "";
+            document.getElementById('system-log').innerHTML = '<div class="text-slate-600">[Hệ thống] Đã reset toàn bộ thông số.</div>';
+        }
+
+        // Hàm hỗ trợ in LOG
+        function addLog(message, color = "slate") {
+            const logBox = document.getElementById('system-log');
+            const time = new Date().toLocaleTimeString('vi-VN');
+            let colorClass = `text-${color}-400`;
+            if(color === "red") colorClass = "text-red-400";
+            else if(color === "emerald") colorClass = "text-emerald-400";
+            else if(color === "amber") colorClass = "text-amber-400";
+            else if(color === "blue") colorClass = "text-blue-400";
+
+            logBox.innerHTML += `<div class="${colorClass}">[${time}] ${message}</div>`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+    </script>
 </body>
 </html>
