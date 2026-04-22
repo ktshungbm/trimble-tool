@@ -1,7 +1,7 @@
 {
-  "title": "Excel Colorizer",
-  "icon": "https://heodaigia1983.github.io/trimble-extension/icon.png?v=3",
-  "url": "https://heodaigia1983.github.io/trimble-extension/index.html?v=3",
+  "title": "BIM STEEL Colorizer",
+  "icon": "https://ktshungbm.github.io/trimble-tool/icon.png",
+  "url": "https://ktshungbm.github.io/trimble-tool/index.html",
   "description": "Read Excel and colorize objects by GUID",
   "enabled": true
 }
